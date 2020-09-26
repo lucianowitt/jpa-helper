@@ -1,1 +1,1 @@
-# jpa-helper
+# jpa2-query
