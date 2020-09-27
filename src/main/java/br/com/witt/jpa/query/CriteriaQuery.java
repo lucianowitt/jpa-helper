@@ -1,5 +1,6 @@
 package br.com.witt.jpa.query;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,6 +20,20 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import javax.persistence.criteria.Selection;
 
+/**
+ * Facade for easy and fluent JPA 2.1 criteria query building and executing.<br>
+ * Example:
+ * 
+ * <pre>
+ * CriteriaQuery q = new CriteriaQuery(entityManager);
+ * q.newQuery(MyEntity.class).from(MyEntity.class).selectDistinct();
+ * q.where(q.cb().equal(q.get("id"), myEntityId));
+ * MyEntity myEntity = q.getSingleResult();
+ * </pre>
+ * 
+ * @author lucianowitt@gmail.com
+ * 
+ */
 public class CriteriaQuery {
 
 	private EntityManager em;
@@ -31,8 +46,14 @@ public class CriteriaQuery {
 		this.em = em;
 	}
 
+	/**
+	 * Creates a new query with the informed result class.
+	 * 
+	 * @param resultClass the class of the query result
+	 * @return this {@link CriteriaQuery} instance
+	 */
 	public CriteriaQuery newQuery(Class<?> resultClass) {
-		this.cb = em.getCriteriaBuilder();
+		cb = em.getCriteriaBuilder();
 		if (Objects.isNull(resultClass)) {
 			query = cb.createQuery();
 		} else {
@@ -43,14 +64,34 @@ public class CriteriaQuery {
 		return this;
 	}
 
+	/**
+	 * Creates a new query to return a scalar, as no result class is informed.
+	 * 
+	 * @return this {@link CriteriaQuery} instance
+	 */
 	public CriteriaQuery newQuery() {
 		return newQuery(null);
 	}
 
+	/**
+	 * Gives access to the {@link CriteriaBuilder} used to build the
+	 * {@link javax.persistence.criteria.CriteriaQuery}.
+	 * 
+	 * @return the {@link CriteriaBuilder}
+	 */
 	public CriteriaBuilder cb() {
 		return cb;
 	}
 
+	/**
+	 * Adds an entity class (table) to the from clause of the query, with the given
+	 * alias.
+	 * 
+	 * @param entityClass the entity class (table)
+	 * @param alias       the entity class (table) alias
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#from(Class)}
+	 */
 	public CriteriaQuery from(Class<?> entityClass, String alias) {
 		alias = getEntityAlias(alias);
 		Root<?> root = query.from(entityClass);
@@ -59,10 +100,31 @@ public class CriteriaQuery {
 		return this;
 	}
 
+	/**
+	 * Adds an entity class (table) to the from clause of the query. If there will
+	 * be more than one entity class (table) in the query, it is recommended to give
+	 * it an alias by calling {@link CriteriaQuery#from(Class, String)} instead.
+	 * 
+	 * @param entityClass the entity class (table)
+	 * @return this {@link CriteriaQuery} instance
+	 */
 	public CriteriaQuery from(Class<?> entityClass) {
 		return from(entityClass, null);
 	}
 
+	/**
+	 * Creates a join, of the join type informed, with the given path. The path
+	 * should have the format <code>{alias}.{attribute}</code>. The alias part is
+	 * optional if there is only one entity class (table) in the from clause and it
+	 * is the path source.
+	 * 
+	 * @param path  the path from the source entity (table) to the target entity
+	 *              (table)
+	 * @param alias the target entity (table) alias
+	 * @param type  the join type
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.From#join(String,JoinType)}
+	 */
 	public CriteriaQuery join(String path, String alias, JoinType type) {
 		alias = getEntityAlias(alias);
 		From<?, ?> from = null;
@@ -81,72 +143,196 @@ public class CriteriaQuery {
 			}
 			i = 1;
 		}
-		Join<?, ?> join = from.join(pathParts[i]);
+		Join<?, ?> join = from.join(pathParts[i], type);
 		entities.put(alias, join);
 		return this;
 	}
 
+	/**
+	 * Creates an inner join with the given path. The path should have the format
+	 * <code>{alias}.{attribute}</code>. The alias part is optional if there is only
+	 * one entity class (table) in the from clause and it is the path source.
+	 * 
+	 * @param path  the path from the source entity (table) to the target entity
+	 *              (table)
+	 * @param alias the target entity (table) alias
+	 * @return this {@link CriteriaQuery} instance
+	 */
 	public CriteriaQuery join(String path, String alias) {
 		return join(path, alias, JoinType.INNER);
 	}
 
+	/**
+	 * Creates a left outer join with the given path. The path should have the
+	 * format <code>{alias}.{attribute}</code>. The alias part is optional if there
+	 * is only one entity class (table) in the from clause and it is the path
+	 * source.
+	 * 
+	 * @param path  the path from the source entity (table) to the target entity
+	 *              (table)
+	 * @param alias the target entity (table) alias
+	 * @return this {@link CriteriaQuery} instance
+	 */
 	public CriteriaQuery leftJoin(String path, String alias) {
 		return join(path, alias, JoinType.LEFT);
 	}
 
+	/**
+	 * Creates a right outer join with the given path. The path should have the
+	 * format <code>{alias}.{attribute}</code>. The alias part is optional if there
+	 * is only one entity class (table) in the from clause and it is the path
+	 * source.
+	 * 
+	 * @param path  the path from the source entity (table) to the target entity
+	 *              (table)
+	 * @param alias the target entity (table) alias
+	 * @return this {@link CriteriaQuery} instance
+	 */
 	public CriteriaQuery rightJoin(String path, String alias) {
 		return join(path, alias, JoinType.RIGHT);
 	}
 
+	/**
+	 * Specifies the list of selections to be returned by the query.
+	 * 
+	 * @param selections the list of selections.
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#multiselect(List)}
+	 */
 	public CriteriaQuery select(List<Selection<?>> selections) {
 		query.multiselect(selections);
 		return this;
 	}
 
+	/**
+	 * Specifies one or more selections to be returned by the query.
+	 * 
+	 * @param selections one or more selections.
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#multiselect(Selection...)}
+	 */
 	public CriteriaQuery select(Selection<?>... selections) {
 		query.multiselect(selections);
 		return this;
 	}
 
+	/**
+	 * Specifies that duplicated results will be discarded. The same as the method
+	 * {@link CriteriaQuery#distinct()}, but with a name that sounds better when no
+	 * selection will be informed.
+	 * 
+	 * @return this {@link CriteriaQuery} instance
+	 */
 	public CriteriaQuery selectDistinct() {
 		return distinct();
 	}
 
+	/**
+	 * Specifies that duplicated results will be discarded.
+	 * 
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#distinct(boolean)}
+	 */
 	public CriteriaQuery distinct() {
 		query.distinct(true);
 		return this;
 	}
 
+	/**
+	 * Convenience method to create a new list of predicates to later pass to the
+	 * {@link CriteriaQuery#where(Predicate...)} method. Use se
+	 * {@link CriteriaBuilder} to create predicates to add to this list.
+	 * 
+	 * @return new list of restrictions (predicates)
+	 * @see {@link CriteriaQuery#cb()}
+	 */
+	public List<Predicate> newRestrictions() {
+		return new ArrayList<Predicate>();
+	}
+
+	/**
+	 * Specifies the restrictions for the where clause. If more than one is
+	 * informed, they will be all arguments of a conjunction (AND operator)
+	 * predicate.
+	 * 
+	 * @param restrictions the criteria restrictions
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#where(Predicate...)}
+	 */
 	public CriteriaQuery where(Predicate... restrictions) {
 		query.where(restrictions);
 		return this;
 	}
 
+	/**
+	 * Specifies the group by expressions.
+	 * 
+	 * @param e list of group by expressions
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#groupBy(List))}
+	 */
 	public CriteriaQuery groupBy(List<Expression<?>> e) {
 		query.groupBy(e);
 		return this;
 	}
 
+	/**
+	 * Specifies the group by expressions.
+	 * 
+	 * @param e one or more group by expressions
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#groupBy(Expression...)}
+	 */
 	public CriteriaQuery groupBy(Expression<?>... e) {
 		query.groupBy(e);
 		return this;
 	}
 
+	/**
+	 * Specifies the restrictions for the having clause. If more than one is
+	 * informed, they will be all arguments of a conjunction (AND operator)
+	 * predicate.
+	 * 
+	 * @param restrictions the criteria restrictions
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#having(Predicate...)}
+	 */
 	public CriteriaQuery having(Predicate... restrictions) {
 		query.having(restrictions);
 		return this;
 	}
 
+	/**
+	 * Specifies the query ordering.
+	 * 
+	 * @param o list of {@link Order} expressions
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#orderBy(List)}
+	 */
 	public CriteriaQuery orderBy(List<Order> o) {
 		query.orderBy(o);
 		return this;
 	}
 
+	/**
+	 * Specifies the query ordering.
+	 * 
+	 * @param o one or more {@link Order} expressions
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#orderBy(Order...)}
+	 */
 	public CriteriaQuery orderBy(Order... o) {
 		query.orderBy(o);
 		return this;
 	}
 
+	/**
+	 * Creates a {@link Path} to an entity attribute.
+	 * 
+	 * @param path string path in the format
+	 *             <code>{alias}.{attribute}.{attribute}...</code>
+	 * @return the {@link Path}
+	 */
 	public Path<?> get(String path) {
 		From<?, ?> from = null;
 		checkPath(path);
@@ -169,20 +355,50 @@ public class CriteriaQuery {
 		return result;
 	}
 
+	/**
+	 * Sets a query property or hint.
+	 * 
+	 * @param name  property/hint name
+	 * @param value property/hint value
+	 * @see {@link javax.persistence.TypedQuery#setHint(String, Object)}
+	 */
 	public void setHint(String name, Object value) {
 		hints.put(name, value);
 	}
 
+	/**
+	 * Executes the query and returns a single result.
+	 * 
+	 * @param <T> the type of the result, resolved at runtime
+	 * @return the single result of the query execution
+	 * @see {@link javax.persistence.TypedQuery#getSingleResult()}
+	 */
 	@SuppressWarnings("unchecked")
 	public <T> T getSingleResult() {
 		return (T) getTypedQuery().getSingleResult();
 	}
 
+	/**
+	 * Executes the query and returns a list of results.
+	 * 
+	 * @param <T> the type of the result, resolved at runtime
+	 * @return the list of results of the query execution
+	 * @see {@link javax.persistence.TypedQuery#getResultList()}
+	 */
 	@SuppressWarnings("unchecked")
 	public <T> List<T> getResultList() {
-		return (List<T>) getTypedQuery().getResultList();
+		TypedQuery<?> typedQuery = getTypedQuery();
+		return (List<T>) typedQuery.getResultList();
 	}
 
+	/**
+	 * Executes the query and returns a page of results.
+	 * 
+	 * @param <T>        the type of the results, resolved at runtime
+	 * @param pageNumber the number of the page
+	 * @param pageSize   the size of the page
+	 * @return a page of results
+	 */
 	@SuppressWarnings("unchecked")
 	public <T> List<T> getResultPage(int pageNumber, int pageSize) {
 		TypedQuery<?> typedQuery = getTypedQuery();

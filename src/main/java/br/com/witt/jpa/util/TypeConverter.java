@@ -11,8 +11,25 @@ import java.util.Objects;
 
 import javax.persistence.Transient;
 
+/**
+ * Converter used in SQL query result conversions.
+ * 
+ * @author lucianowtt@gmail.com
+ *
+ */
 public class TypeConverter {
 
+	/**
+	 * Converts an array of objects to an instance of the given DTO class. The class
+	 * must have a constructor with all the columns returned by the query as
+	 * arguments, in the same order as declared in the SQL statement, and with
+	 * compatible types.
+	 * 
+	 * @param <T>         the type of the DTO to be returned, resolved at runtime
+	 * @param result      the query result
+	 * @param resultClass the class of the DTO to be returned
+	 * @return the DTO instance
+	 */
 	@SuppressWarnings("unchecked")
 	public static <T> T convert(Object[] result, Class<?> resultClass) {
 		try {
@@ -49,6 +66,13 @@ public class TypeConverter {
 		}
 	}
 
+	/**
+	 * Converts an object to the expected type, if compatible.
+	 * 
+	 * @param object the object to be converted
+	 * @param type   the expected resulting type
+	 * @return the resulting instance of the expected type
+	 */
 	public static Object convertValue(Object object, Class<?> type) {
 		if (Objects.isNull(object)) {
 			return null;

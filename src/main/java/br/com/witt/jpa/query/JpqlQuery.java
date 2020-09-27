@@ -4,12 +4,25 @@ import java.util.Objects;
 
 import javax.persistence.EntityManager;
 
+/**
+ * Facade for easy and fluent JPA 2.1 JPQL query building and executing.<br>
+ * 
+ * @author lucianowitt@gmail.com
+ *
+ */
 public class JpqlQuery extends Query {
 
 	public JpqlQuery(EntityManager em) {
 		super(em);
 	}
 
+	/**
+	 * Creates a new query with the informed result class.
+	 * 
+	 * @param jpql        JPQL string
+	 * @param resultClass the class of the query result
+	 * @return this {@link JpqlQuery} instance
+	 */
 	public JpqlQuery newQuery(String jpql, Class<?> resultClass) {
 		if (Objects.isNull(resultClass)) {
 			query = em.createQuery(jpql);
@@ -19,7 +32,13 @@ public class JpqlQuery extends Query {
 		return this;
 	}
 
-	public JpqlQuery newQuery(String sql) {
-		return newQuery(sql, null);
+	/**
+	 * Creates a new query to return a scalar, as no result class is informed.
+	 * 
+	 * @param jpql JPQL string
+	 * @return this {@link JpqlQuery} instance
+	 */
+	public JpqlQuery newQuery(String jpql) {
+		return newQuery(jpql, null);
 	}
 }
