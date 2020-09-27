@@ -5,7 +5,15 @@
   <groupId>br.com.witt</groupId>
   <artifactId>jpa2-query</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>JPA Helper</name>
+  <name>JPA2 Query</name>
+  <url>https://github.com/lucianowitt/jpa2-query</url>
+  <description>Facade classes for easy and fluent build and execution of JPA 2.1 queries.</description>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>http://www.opensource.org/licenses/mit-license.php</url>
+    </license>
+  </licenses>
 
   <properties>
     <java.version>11</java.version>
