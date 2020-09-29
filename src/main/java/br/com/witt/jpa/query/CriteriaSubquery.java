@@ -330,6 +330,10 @@ public class CriteriaSubquery<T> {
 		return e;
 	}
 
+	public Subquery<T> getSubquery() {
+		return query;
+	}
+
 	/**
 	 * Creates a new subquery with the informed result class.
 	 * 
@@ -338,8 +342,9 @@ public class CriteriaSubquery<T> {
 	 * @return the {@link CriteriaSubquery} instance
 	 * @see {@link javax.persistence.criteria.CommonAbstractCriteria#subquery(Class)}
 	 */
-	public <E> Subquery<E> newSubquery(Class<E> resultClass) {
-		return query.subquery(resultClass);
+	public <E> CriteriaSubquery<E> newSubquery(Class<E> resultClass) {
+		Subquery<E> subquery = query.subquery(resultClass);
+		return new CriteriaSubquery<E>(cb, subquery);
 	}
 
 	private String getEntityAlias(String alias) {
