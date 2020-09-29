@@ -9,7 +9,7 @@ import javax.persistence.EntityManager;
 import br.com.witt.jpa.util.TypeConverter;
 
 /**
- * Facade for easy and fluent JPA 2.1 SQL query building and executing.<br>
+ * Facade for easy and fluent JPA 2.1 SQL query building and executing.
  * 
  * @author lucianowitt@gmail.com
  *
@@ -18,7 +18,7 @@ public class SqlQuery extends Query {
 
 	private Class<?> resultClass;
 
-	public SqlQuery(EntityManager em) {
+	protected SqlQuery(EntityManager em) {
 		super(em);
 	}
 
@@ -29,7 +29,7 @@ public class SqlQuery extends Query {
 	 * @param resultClass the class of the query result
 	 * @return this {@link SqlQuery} instance
 	 */
-	public SqlQuery newQuery(String sql, Class<?> resultClass) {
+	protected SqlQuery newQuery(String sql, Class<?> resultClass) {
 		this.resultClass = resultClass;
 		query = em.createNativeQuery(sql);
 		return this;
@@ -41,7 +41,7 @@ public class SqlQuery extends Query {
 	 * @param sql SQL string
 	 * @return this {@link SqlQuery} instance
 	 */
-	public SqlQuery newQuery(String sql) {
+	protected SqlQuery newQuery(String sql) {
 		return newQuery(sql, null);
 	}
 

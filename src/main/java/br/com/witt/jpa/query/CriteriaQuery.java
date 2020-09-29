@@ -19,6 +19,7 @@ import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import javax.persistence.criteria.Selection;
+import javax.persistence.criteria.Subquery;
 
 /**
  * Facade for easy and fluent JPA 2.1 criteria query building and executing.<br>
@@ -42,7 +43,7 @@ public class CriteriaQuery {
 	private Map<String, From<?, ?>> entities;
 	private Map<String, Object> hints;
 
-	public CriteriaQuery(EntityManager em) {
+	protected CriteriaQuery(EntityManager em) {
 		this.em = em;
 	}
 
@@ -52,7 +53,7 @@ public class CriteriaQuery {
 	 * @param resultClass the class of the query result
 	 * @return this {@link CriteriaQuery} instance
 	 */
-	public CriteriaQuery newQuery(Class<?> resultClass) {
+	protected CriteriaQuery newQuery(Class<?> resultClass) {
 		cb = em.getCriteriaBuilder();
 		if (Objects.isNull(resultClass)) {
 			query = cb.createQuery();
@@ -69,7 +70,7 @@ public class CriteriaQuery {
 	 * 
 	 * @return this {@link CriteriaQuery} instance
 	 */
-	public CriteriaQuery newQuery() {
+	protected CriteriaQuery newQuery() {
 		return newQuery(null);
 	}
 
@@ -158,7 +159,7 @@ public class CriteriaQuery {
 	 * @param alias the target entity (table) alias
 	 * @return this {@link CriteriaQuery} instance
 	 */
-	public CriteriaQuery join(String path, String alias) {
+	public CriteriaQuery innerJoin(String path, String alias) {
 		return join(path, alias, JoinType.INNER);
 	}
 
@@ -239,8 +240,31 @@ public class CriteriaQuery {
 	}
 
 	/**
+	 * Specifies the expression to be counted.
+	 * 
+	 * @param x the expression to be counted
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaBuilder#count(Expression)}
+	 */
+	public CriteriaQuery count(Expression<?> x) {
+		return select(cb.count(x));
+	}
+
+	/**
+	 * Specifies the expression to be counted, and that duplicated results wont be
+	 * considered.
+	 * 
+	 * @param x the expression to be counted
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaBuilder#countDistinct(Expression)}
+	 */
+	public CriteriaQuery countDistinct(Expression<?> x) {
+		return select(cb.countDistinct(x));
+	}
+
+	/**
 	 * Convenience method to create a new list of predicates to later pass to the
-	 * {@link CriteriaQuery#where(Predicate...)} method. Use se
+	 * {@link CriteriaQuery#where(Predicate...)} method. Use the
 	 * {@link CriteriaBuilder} to create predicates to add to this list.
 	 * 
 	 * @return new list of restrictions (predicates)
@@ -248,6 +272,20 @@ public class CriteriaQuery {
 	 */
 	public List<Predicate> newRestrictions() {
 		return new ArrayList<Predicate>();
+	}
+	
+	/**
+	 * Specifies the restrictions for the where clause. If more than one is
+	 * informed, they will be all arguments of a conjunction (AND operator)
+	 * predicate.
+	 * 
+	 * @param restrictions the criteria restrictions
+	 * @return this {@link CriteriaQuery} instance
+	 * @see {@link javax.persistence.criteria.CriteriaQuery#where(Predicate...)}
+	 */
+	public CriteriaQuery where(List<Predicate> restrictions) {
+		query.where(restrictions.toArray(new Predicate[restrictions.size()]));
+		return this;
 	}
 
 	/**
@@ -327,6 +365,19 @@ public class CriteriaQuery {
 	}
 
 	/**
+	 * Creates a new subquery with the informed result class.
+	 * 
+	 * @param <T>         the type of the subquery result, resolved at runtime
+	 * @param resultClass the class of the subquery result
+	 * @return the {@link CriteriaSubquery} instance
+	 * @see {@link javax.persistence.criteria.CommonAbstractCriteria#subquery(Class)}
+	 */
+	public <T> CriteriaSubquery<T> newSubquery(Class<T> resultClass) {
+		Subquery<T> subquery = query.subquery(resultClass);
+		return new CriteriaSubquery<T>(cb, subquery);
+	}
+
+	/**
 	 * Creates a {@link Path} to an entity attribute.
 	 * 
 	 * @param path string path in the format
@@ -353,6 +404,27 @@ public class CriteriaQuery {
 			result = result.get(pathParts[i]);
 		}
 		return result;
+	}
+
+	/**
+	 * Creates a string expression of concatenated string expressions.
+	 * 
+	 * @param parts the string expression to concatenate
+	 * @return the concatenated string expression
+	 * @see {@link CriteriaBuilder#concat(Expression, Expression)}
+	 */
+	@SuppressWarnings("unchecked")
+	public Expression<String> concat(Expression<String>... parts) {
+		if (parts == null || parts.length == 0) {
+			return null;
+		}
+		Expression<String> e = parts[0];
+		if (parts.length > 1) {
+			for (int i = 1; i < parts.length; i++) {
+				e = cb.concat(e, parts[i]);
+			}
+		}
+		return e;
 	}
 
 	/**
@@ -416,10 +488,10 @@ public class CriteriaQuery {
 	}
 
 	private String getEntityAlias(String alias) {
-		if (Objects.isNull(alias)) {
+		if (Objects.isNull(alias) || alias.trim().isEmpty()) {
 			alias = String.format("e%03d", entities.size());
 		}
-		return alias;
+		return alias.trim();
 	}
 
 	private void checkPath(String path) {

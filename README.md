@@ -25,11 +25,11 @@ import myapp.entities.Department;
 public class DepartmentRepository {
 
     @Inject
-    private EntityManager em;
+    private JpaQueryFactory jpaQueryFactory;
 
     public List<Department> searchActiveDepartments(String name) {
-        CriteriaQuery q = new CriteriaQuery(em);
-        q.newQuery(Department.class).from(Department.class).selectDistinct();
+        CriteriaQuery q = jpaQueryFactory.createCriteriaQuery(Department.class);
+        q.from(Department.class).selectDistinct();
         List<Predicate> restrictions = q.newRestrictions();
         restrictions.add(q.cb().like(q.get("name").as(String.class), "%" + name + "%"));
         restrictions.add(q.cb().equal(q.get("active"), Boolean.TRUE);
@@ -39,19 +39,49 @@ public class DepartmentRepository {
     }
 
     public List<Department> listActiveDepartments(int pageNumber, int pageSize) {
-        JpqlQuery q = new JpqlQuery(em);
         String jpql = "select d from Department d where d.active = :active order by d.name";
-        q.newQuery(jpql, Department.class);
+        JpqlQuery q = jpaQueryFactory.createJpqlQuery(jpql, Department.class);
         q.setParameter("active", Boolean.TRUE);
         return q.getResultPage(pageNumber, pageSize);
     }
 
     public Long countActiveDepartments() {
-        SqlQuery q = new SqlQuery(em);
         String sql = "select count(*) as total from Department where active = :active";
-        q.newQuery(sql);
+        SqlQuery q = jpaQueryFactory.createSqlQuery(sql);
         q.setParameter("active", Boolean.TRUE);
         return q.getScalar(Long.class);
+    }
+}
+```
+
+Where, for example, the JpaQueryFactory is provided by:
+
+```
+package myapp.config;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Dependent;
+import javax.enterprise.inject.Produces;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+
+import br.com.witt.jpa.query.JpaQueryFactory;
+
+@ApplicationScoped
+public class ResourceProvider {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    @Produces
+    public EntityManager getEntityManager() {
+        return entityManager;
+    }
+
+    @Produces
+    @Dependent
+    public JpaQueryFactory getJpaQueryFactory() {
+        return new JpaQueryFactory(entityManager);
     }
 }
 ```

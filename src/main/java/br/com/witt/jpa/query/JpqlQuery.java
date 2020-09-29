@@ -5,14 +5,14 @@ import java.util.Objects;
 import javax.persistence.EntityManager;
 
 /**
- * Facade for easy and fluent JPA 2.1 JPQL query building and executing.<br>
+ * Facade for easy and fluent JPA 2.1 JPQL query building and executing.
  * 
  * @author lucianowitt@gmail.com
  *
  */
 public class JpqlQuery extends Query {
 
-	public JpqlQuery(EntityManager em) {
+	protected JpqlQuery(EntityManager em) {
 		super(em);
 	}
 
@@ -23,7 +23,7 @@ public class JpqlQuery extends Query {
 	 * @param resultClass the class of the query result
 	 * @return this {@link JpqlQuery} instance
 	 */
-	public JpqlQuery newQuery(String jpql, Class<?> resultClass) {
+	protected JpqlQuery newQuery(String jpql, Class<?> resultClass) {
 		if (Objects.isNull(resultClass)) {
 			query = em.createQuery(jpql);
 		} else {
@@ -38,7 +38,7 @@ public class JpqlQuery extends Query {
 	 * @param jpql JPQL string
 	 * @return this {@link JpqlQuery} instance
 	 */
-	public JpqlQuery newQuery(String jpql) {
+	protected JpqlQuery newQuery(String jpql) {
 		return newQuery(jpql, null);
 	}
 }
